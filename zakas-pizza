@@ -1,0 +1,134 @@
+from aiogram import types, executor, Bot, Dispatcher
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters.state import StatesGroup, State
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+
+bot = Bot(token='6318818315:AAHI5NDvzr-osZ7OG6UgD1jXVsTVWmnEp4U')
+storage = MemoryStorage()
+dp = Dispatcher(bot=bot, storage=storage)
+hajmi = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton('katta'),
+            KeyboardButton('o`rtacha'),
+            KeyboardButton('kichik')
+
+        ]
+    ], resize_keyboard=True
+)
+turi = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton('🍕 New York 🍕'),
+            KeyboardButton('🍕 Belissimo 🍕'),
+            KeyboardButton('🍕 Amerika 🍕')
+        ],
+        [
+            KeyboardButton('🍕 Itaaliy 🍕'),
+            KeyboardButton('🍕 Strada 🍕'),
+            KeyboardButton('🍕 Margarin 🍕')
+        ]
+    ], resize_keyboard=True
+)
+shahar = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton('Samarqand'),
+            KeyboardButton('Qarshi'),
+            KeyboardButton('Toshkent')
+        ],
+        [
+            KeyboardButton('Andijon'),
+            KeyboardButton('Surxandaryo'),
+            KeyboardButton('Buxoro')
+        ]
+    ], resize_keyboard=True
+)
+
+info = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton('Mening laktsiyamni yuborish', request_location=True),
+        ]
+    ], resize_keyboard=True
+)
+
+
+class UserInfo(StatesGroup):
+    full_name = State()
+    pizza_viloyat = State()
+    pizza_turi = State()
+    pizza_hajmi = State()
+    final = State()
+
+
+@dp.message_handler(text="/start")
+async def cmd_start(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['full_name'] = message.text
+    await UserInfo.full_name.set()
+    await message.answer(f'Assalalomu aleykum siz ozodPRO botidasiz\n'
+                         'pizza 🍕 zakas qilish  uchun to`liq ismingizni kiriting')
+    await UserInfo.next()
+
+
+@dp.message_handler(state=UserInfo.pizza_viloyat)
+async def zakas_piza(message: types.Message, state: FSMContext):
+    name = message.text.split()
+    if 2 < len(name) < 4 and ''.join(name).isalpha():
+        async with state.proxy() as data:
+            data['pizza_viloyat'] = message.text
+
+        await message.answer(f'I.F.O qabul qilindi\n'
+                             f'xurmatli {message.from_user.full_name} viloyatingizni tanlang', reply_markup=shahar)
+
+        await UserInfo.next()
+    else:
+        await message.answer('bu xato'
+                             'yana urinib ko`ring')
+
+
+@dp.message_handler(state=UserInfo.pizza_turi)
+async def pizza_turi(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['pizza_turi'] = message.text
+    photo = ('pizza'.jpg)
+    await message.answer_photo(caption='Viloyat qbul qilindi\n' 'Endi pizza turini tanlang', photo=photo,
+                               reply_markup=turi)
+
+    await UserInfo.next()
+
+
+@dp.message_handler(state=UserInfo.pizza_hajmi)
+async def cmd_hajmi(message: types.Message, state: FSMContext):
+    await message.answer('pizza turi qabul qilindi\n'
+                         'endi hajmini tanlang', reply_markup=hajmi)
+    async with state.proxy() as data:
+        data['pizza_hajmi'] = message.text
+    await UserInfo.next()
+
+
+@dp.message_handler(state=UserInfo.final)
+async def cmd_narx(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['full_name'] = message.text
+    await bot.send_message(
+        chat_id=5950204164,
+        text=f'Buyurtma qabul qilindi ✅\n'
+             f'Sizning buyurtmangiz 🧑‍💻\n'
+             f'Buyurtma beruvchi ismi: {data["pizza_viloyat"]}\n'
+             f'pizza hajmi: {data["full_name"]}\n'
+             f'viloyat ismi: {data["pizza_turi"]}\n'
+             f'pizza turi: {data["pizza_hajmi"]}'
+    )
+
+    await message.answer(f"🫡 {message.from_user.full_name}\n"
+                         "bizga lakatsiyangizni yuboring\n"
+                         "biz sizga 1 soatda pizzani yetkazib beramiz🚕\n"
+                         "xarid uchun raxmat🫡, 😕🙃!", reply_markup=info)
+    await state.finish()
+
+
+if __name__ == "__main__":
+    executor.start_polling(dp, skip_updates=True)
